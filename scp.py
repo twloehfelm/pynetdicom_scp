@@ -1,7 +1,5 @@
 import os
-
 from pydicom.filewriter import write_file_meta_info
-
 from pynetdicom import (
   AE, debug_logger, evt, AllStoragePresentationContexts,
   ALL_TRANSFER_SYNTAXES
@@ -18,6 +16,8 @@ def handle_store(event, storage_dir):
     return 0xC001
 
   # We rely on the UID from the C-STORE request instead of decoding
+  # This is faster than decoding the file to read the UID, but
+  # could also decode and use MRN, acc# to make a more useful directory tree
   fname = os.path.join(storage_dir, event.request.AffectedSOPInstanceUID)
   with open(fname, 'wb') as f:
     # Write the preamble, prefix and file meta information elements
