@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  pynetdicom:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "${PORT}:11112"
+    volumes:
+      - ./out:/code/out
+
+volumes:
+  out:
