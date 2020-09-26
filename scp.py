@@ -29,15 +29,22 @@ def handle_store_flat_dir(event, storage_dir):
 
     return 0x0000
 
-def handle_store_pt_accnum_dir(event):
-     """Handle EVT_C_STORE events."""
-     ds = event.dataset
-     ds.file_meta = event.file_meta
-     ds.save_as(ds.SOPInstanceUID, write_like_original=False)
+def handle_store_pt_accnum_dir(event, storage_dir):
+  """Handle EVT_C_STORE events."""
+  ds = event.dataset
+  ds.file_meta = event.file_meta
+  save_loc = os.path.join(storage_dir, ds.PatientID, ds.AccessionNumber)
+  try:
+    os.makedirs(save_loc, exist_ok=True)
+  except:
+    # Unable to create output dir, return failure status
+    return 0xC001
+  save_loc = os.path.join(save_loc, ds.SOPInstanceUID + '.dcm')
+  ds.save_as(save_loc, write_like_original=False)
 
-     return 0x0000
+  return 0x0000
 
-handlers = [(evt.EVT_C_STORE, handle_store_flat_dir, ['out'])]
+handlers = [(evt.EVT_C_STORE, handle_store_pt_accnum_dir, ['out'])]
 
 ae = AE()
 storage_sop_classes = [
