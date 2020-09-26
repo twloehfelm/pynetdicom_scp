@@ -7,7 +7,7 @@ from pynetdicom import (
 
 debug_logger()
 
-def handle_store(event, storage_dir):
+def handle_store_flat_dir(event, storage_dir):
   """Handle EVT_C_STORE events."""
   try:
     os.makedirs(storage_dir, exist_ok=True)
@@ -17,7 +17,7 @@ def handle_store(event, storage_dir):
 
   # We rely on the UID from the C-STORE request instead of decoding
   # This is faster than decoding the file to read the UID, but
-  # could also decode and use MRN, acc# to make a more useful directory tree
+  # if you do decode you can use MRN, acc#, etc for more useful dir tree
   fname = os.path.join(storage_dir, event.request.AffectedSOPInstanceUID)
   with open(fname, 'wb') as f:
     # Write the preamble, prefix and file meta information elements
@@ -29,7 +29,15 @@ def handle_store(event, storage_dir):
 
     return 0x0000
 
-handlers = [(evt.EVT_C_STORE, handle_store, ['out'])]
+def handle_store_pt_accnum_dir(event):
+     """Handle EVT_C_STORE events."""
+     ds = event.dataset
+     ds.file_meta = event.file_meta
+     ds.save_as(ds.SOPInstanceUID, write_like_original=False)
+
+     return 0x0000
+
+handlers = [(evt.EVT_C_STORE, handle_store_flat_dir, ['out'])]
 
 ae = AE()
 storage_sop_classes = [
