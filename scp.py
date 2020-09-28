@@ -1,3 +1,5 @@
+# ref https://pydicom.github.io/pynetdicom/dev/tutorials/create_scp.html
+
 import os
 from pydicom.filewriter import write_file_meta_info
 from pynetdicom import (
@@ -52,5 +54,9 @@ storage_sop_classes = [
 ]
 for uid in storage_sop_classes:
   ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
+
+# Supposedly increases transfer speed
+# ref: https://pydicom.github.io/pynetdicom/dev/examples/storage.html#storage-scp
+ae.maximum_pdu_size = 0
 
 ae.start_server(('', 11112), block=True, ae_title=os.environ['AE_TITLE'], evt_handlers=handlers)
