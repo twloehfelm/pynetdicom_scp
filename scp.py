@@ -61,8 +61,13 @@ def handle_store(event, storage_dir):
   ds.file_meta = event.file_meta
   save_loc = storage_dir/ds.PatientID/ds.AccessionNumber
   last_received_time[save_loc] = datetime.now()
-  series_desc = str(ds.SeriesNumber).zfill(2) + '_' + ds.SeriesDescription.replace('/','_')
-  save_loc = storage_dir/ds.PatientID/ds.AccessionNumber/series_desc
+
+  if ds.SeriesNumber is not None:
+    series_desc = str(ds.SeriesNumber).zfill(2)
+    if "SeriesDescription" in ds:
+      series_desc += '_' + ds.SeriesDescription.replace('/', '_')
+    save_loc = save_loc/series_desc
+
   try:
     save_loc.mkdir(parents=True, exist_ok=True)
   except:
