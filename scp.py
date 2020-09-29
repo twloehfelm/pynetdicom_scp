@@ -5,7 +5,6 @@ from datetime import datetime
 import logging
 import threading
 from pathlib import Path
-from pydicom.filewriter import write_file_meta_info
 from pynetdicom import (
   AE, debug_logger, evt, AllStoragePresentationContexts,
   ALL_TRANSFER_SYNTAXES
