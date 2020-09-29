@@ -23,9 +23,10 @@ last_received_time = {}
 
 def check_studies():
   """
-  Checks for studies where no new images have been received in at least 2 min
-  Assume these stale studies have completed sending
+  Checks q20sec for studies with no new images in at least 2 min
+  Assume these stale studies have finished being sent
   Move from received => queue folder for further processing
+  Remove empty dirs from received folder
   """
   threading.Timer(20.0, check_studies).start()
   stale_studies = [s for s in last_received_time if (datetime.now() - last_received_time[s]).total_seconds() >= 120]
@@ -37,34 +38,25 @@ def check_studies():
     try:
       old.parent.rmdir()
     except OSError:
-      """Dir not empty"""
+      """
+      Dir not empty. Do nothing. The server may be receiving another study from
+        the same patient and that study might still be in progress
+      """
 
+# Start timed function
 check_studies()
 
-def handle_store_flat_dir(event, storage_dir):
-  """Handle EVT_C_STORE events."""
-  try:
-    storage_dir.mkdir(parents=True, exist_ok=True)
-  except:
-    # Unable to create output dir, return failure status
-    return 0xC001
-
-  # We rely on the UID from the C-STORE request instead of decoding
-  # This is faster than decoding the file to read the UID, but
-  # if you do decode you can use MRN, acc#, etc for more useful dir tree
-  fname = storage_dir/event.request.AffectedSOPInstanceUID
-  with open(fname, 'wb') as f:
-    # Write the preamble, prefix and file meta information elements
-    f.write(b'\x00' * 128)
-    f.write(b'DICM')
-    write_file_meta_info(f, event.file_meta)
-    # Write the raw encoded dataset
-    f.write(event.request.DataSet.getvalue())
-
-    return 0x0000
-
-def handle_store_pt_accnum_dir(event, storage_dir):
-  """Handle EVT_C_STORE events."""
+def handle_store(event, storage_dir):
+  """
+  Handle EVT_C_STORE events
+  Saves to:
+    dcmstore/
+      received/
+        {mrn}/
+          {accnum}/
+            {series num}_{series desc}/
+              {SOPInstanceUID}.dcm
+  """
   ds = event.dataset
   ds.file_meta = event.file_meta
   save_loc = storage_dir/ds.PatientID/ds.AccessionNumber
@@ -78,16 +70,22 @@ def handle_store_pt_accnum_dir(event, storage_dir):
     return 0xC001
 
   save_loc = save_loc/ds.SOPInstanceUID
+  # Because SOPInstanceUID includes several '.' you can't just use
+  #   with_suffix or else it will replaces the portion of the UID that follows
+  #   the last '.' with '.dcm', truncating the actual UID
   save_loc = save_loc.with_suffix(save_loc.suffix +'.dcm')
   ds.save_as(save_loc, write_like_original=False)
 
   return 0x0000
 
+# List of event handlers
 handlers = [
-  (evt.EVT_C_STORE, handle_store_pt_accnum_dir, [Path('dcmstore/received')]),
+  (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),
 ]
 
 ae = AE()
+
+# Accept storage of all SOP classes
 storage_sop_classes = [
   cx.abstract_syntax for cx in AllStoragePresentationContexts
 ]
@@ -98,4 +96,9 @@ for uid in storage_sop_classes:
 # ref: https://pydicom.github.io/pynetdicom/dev/examples/storage.html#storage-scp
 ae.maximum_pdu_size = 0
 
-ae.start_server(('', 11112), block=True, ae_title=os.environ['AE_TITLE'], evt_handlers=handlers)
+ae.start_server(
+  ('', 11112), # Start server on localhost port 11112
+  block=True,  # Socket operates in blocking mode
+  ae_title=os.environ['AE_TITLE'],
+  evt_handlers=handlers
+)
