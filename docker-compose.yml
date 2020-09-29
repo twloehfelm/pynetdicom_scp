@@ -8,7 +8,7 @@ services:
     ports:
       - "${PORT}:11112"
     volumes:
-      - ./out:/code/out
+      - ./dcmstore:/code/dcmstore
 
 volumes:
-  out:
+  dcmstore:

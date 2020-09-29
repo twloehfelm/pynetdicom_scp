@@ -1,2 +1,4 @@
 .DS_STORE
-out/**
+dcmstore/processed/**
+dcmstore/queue/**
+dcmstore/received/**
