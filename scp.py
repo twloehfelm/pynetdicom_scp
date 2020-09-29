@@ -17,9 +17,9 @@ LOGGER = logging.getLogger('pynetdicom')
 """
 dict where
   key: 'received/{mrn}/{accnum}'
-  val: datetime obj of last received file from {key} study
+  val: datetime of last received file
 """
-study_progress = {}
+last_received_time = {}
 
 def check_studies():
   """
@@ -28,12 +28,12 @@ def check_studies():
   Move from received => queue folder for further processing
   """
   threading.Timer(20.0, check_studies).start()
-  stale_studies = [s for s in study_progress if (datetime.now() - study_progress[s]).total_seconds() >= 120]
+  stale_studies = [s for s in last_received_time if (datetime.now() - last_received_time[s]).total_seconds() >= 120]
   for old in stale_studies:
     new = 'dcmstore/queue'/old.relative_to('dcmstore/received')
     new.mkdir(parents=True, exist_ok=True)
     old.rename(new)
-    study_progress.pop(old)
+    last_received_time.pop(old)
     try:
       old.parent.rmdir()
     except OSError:
@@ -68,14 +68,18 @@ def handle_store_pt_accnum_dir(event, storage_dir):
   ds = event.dataset
   ds.file_meta = event.file_meta
   save_loc = storage_dir/ds.PatientID/ds.AccessionNumber
+  last_received_time[save_loc] = datetime.now()
+  series_desc = str(ds.SeriesNumber).zfill(2) + '_' + ds.SeriesDescription.replace('/','_')
+  save_loc = storage_dir/ds.PatientID/ds.AccessionNumber/series_desc
   try:
     save_loc.mkdir(parents=True, exist_ok=True)
   except:
     # Unable to create output dir, return failure status
     return 0xC001
-  study_progress[save_loc] = datetime.now()
+
   save_loc = save_loc/ds.SOPInstanceUID
-  ds.save_as(save_loc.with_suffix(save_loc.suffix+'.dcm'), write_like_original=False)
+  save_loc = save_loc.with_suffix(save_loc.suffix +'.dcm')
+  ds.save_as(save_loc, write_like_original=False)
 
   return 0x0000
 
