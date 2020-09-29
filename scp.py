@@ -14,18 +14,18 @@ debug_logger()
 LOGGER = logging.getLogger('pynetdicom')
 
 """
-dict where
-  key: 'received/{mrn}/{accnum}'
+dict with
+  key: 'dcmstore/received/{mrn}/{accnum}'
   val: datetime of last received file
 """
 last_received_time = {}
 
 def check_studies():
   """
-  Checks q20sec for studies with no new images in at least 2 min
+  Checks q20sec for studies with no new images in >= 2 min
   Assume these stale studies have finished being sent
-  Move from received => queue folder for further processing
-  Remove empty dirs from received folder
+  Move from `received` => `queue` folder for further processing
+  Remove empty dirs from `received` folder
   """
   threading.Timer(20.0, check_studies).start()
   stale_studies = [s for s in last_received_time if (datetime.now() - last_received_time[s]).total_seconds() >= 120]
@@ -53,7 +53,7 @@ def handle_store(event, storage_dir):
       received/
         {mrn}/
           {accnum}/
-            {series num}_{series desc}/
+            {series num}_{series desc}/   ###  If present  ##
               {SOPInstanceUID}.dcm
   """
   ds = event.dataset
