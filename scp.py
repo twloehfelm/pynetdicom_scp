@@ -10,6 +10,10 @@ from pynetdicom import (
   ALL_TRANSFER_SYNTAXES
 )
 
+# Verification class for C-ECHO (https://pydicom.github.io/pynetdicom/stable/examples/verification.html)
+from pynetdicom.sop_class import VerificationSOPClass
+
+
 debug_logger()
 LOGGER = logging.getLogger('pynetdicom')
 
@@ -82,9 +86,16 @@ def handle_store(event, storage_dir):
 
   return 0x0000
 
+# Implement a handler for evt.EVT_C_ECHO (https://pydicom.github.io/pynetdicom/stable/examples/verification.html)
+def handle_echo(event):
+    """Handle a C-ECHO request event."""
+    return 0x0000
+
+
+
 # List of event handlers
 handlers = [
-  (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),
+  (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),(evt.EVT_C_ECHO, handle_echo)
 ]
 
 ae = AE()
@@ -96,12 +107,14 @@ storage_sop_classes = [
 for uid in storage_sop_classes:
   ae.add_supported_context(uid, ALL_TRANSFER_SYNTAXES)
 
+ae.add_supported_context(VerificationSOPClass)
+
 # Supposedly increases transfer speed
 # ref: https://pydicom.github.io/pynetdicom/dev/examples/storage.html#storage-scp
 ae.maximum_pdu_size = 0
 
 ae.start_server(
-  ('', 11112), # Start server on localhost port 11112
+  ('', 49706), # Start server on localhost port 49706
   block=True,  # Socket operates in blocking mode
   ae_title=os.environ['AE_TITLE'],
   evt_handlers=handlers

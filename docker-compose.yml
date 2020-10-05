@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${PORT}:11112"
+      - "${PORT}:49706"
     volumes:
       - ./dcmstore:/code/dcmstore
 
