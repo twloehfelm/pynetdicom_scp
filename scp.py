@@ -114,7 +114,7 @@ ae.add_supported_context(VerificationSOPClass)
 ae.maximum_pdu_size = 0
 
 ae.start_server(
-  ('', 49706), # Start server on localhost port 49706
+  ('', 11112), # Start server on localhost port 11112
   block=True,  # Socket operates in blocking mode
   ae_title=os.environ['AE_TITLE'],
   evt_handlers=handlers
