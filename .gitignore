@@ -2,3 +2,4 @@
 dcmstore/processed/**
 dcmstore/queue/**
 dcmstore/received/**
+.env

@@ -1,3 +1,16 @@
+"""
+Set of functions to receive DICOM from a sender and process them once
+receipt is complete.
+The general workflow is:
+  - A DICOM storage class providor (SCP) is started
+  - Files are received in to dcmstore/received dir
+  - If no new images are received for a study after a set amount of time,
+    the study is considered complete and moved to the dcmstore/queue folder
+  - A polling function checks the queue folder for complete studies and
+    processes them
+  - Processed studies are moved to dcmstore/processed
+"""
+
 # ref https://pydicom.github.io/pynetdicom/dev/tutorials/create_scp.html
 
 import os
@@ -23,6 +36,26 @@ dict with
   val: datetime of last received file
 """
 last_received_time = {}
+
+# Preload with any studies left over from prior runs
+received_pts = [x for x in Path('dcmstore/received').iterdir() if x.is_dir()]
+for pt in received_pts:
+  studies = [x for x in pt.iterdir() if x.is_dir()]
+  for s in studies:
+    last_received_time[s] = datetime.now()
+
+def process_from_queue():
+  """
+  Process studies from queue folder.
+  """
+  threading.Timer(300, process_from_queue).start()
+  queue_pts = [x for x in Path('dcmstore/queue').iterdir() if x.is_dir()]
+  for pt in queue_pts:
+    studies = [x for x in pt.iterdir() if x.is_dir()]
+    ### if len(studies) > 0:
+      ### DO SOMETHING with studies[0] here
+
+process_from_queue()
 
 def check_studies():
   """
