@@ -74,7 +74,7 @@ def mergefolders(root_src_dir, root_dst_dir):
 
 def check_studies():
   """
-  Checks q20sec for studies with no new images in >= 2 min
+  Checks q60sec for studies with no new images in >= 2 min
   Assume these stale studies have finished being sent
   Move from `received` => `queue` folder for further processing
   Remove empty dirs from `received` folder
@@ -85,15 +85,13 @@ def check_studies():
     new = 'dcmstore/queue' / old.relative_to('dcmstore/received')
     mergefolders(old, new)
     shutil.rmtree(old)
-    #new.mkdir(parents=True, exist_ok=True)
-    #old.rename(new)
     last_received_time.pop(old)
     try:
       old.parent.rmdir()
     except OSError:
       """
-      Dir not empty. Do nothing. The server may be receiving another study from
-        the same patient and that study might still be in progress
+      Parent dir (mrn) not empty. Do nothing. The server may be receiving
+      another study from the same patient that is still in progress
       """
 
 # Start timed function
