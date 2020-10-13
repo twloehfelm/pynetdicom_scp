@@ -141,7 +141,8 @@ def handle_echo(event):
 
 # List of event handlers
 handlers = [
-  (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),(evt.EVT_C_ECHO, handle_echo)
+  (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),
+  (evt.EVT_C_ECHO, handle_echo)
 ]
 
 ae = AE()
