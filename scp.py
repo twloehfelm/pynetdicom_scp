@@ -14,6 +14,7 @@ The general workflow is:
 # ref https://pydicom.github.io/pynetdicom/dev/tutorials/create_scp.html
 
 import os
+import shutil
 from datetime import datetime
 import logging
 import threading
@@ -57,6 +58,20 @@ def process_from_queue():
 
 process_from_queue()
 
+#recursively merge two folders including subfolders
+def mergefolders(root_src_dir, root_dst_dir):
+  for src_dir, dirs, files in os.walk(root_src_dir):
+    dst_dir = src_dir.replace(str(root_src_dir), str(root_dst_dir), 1)
+    if not os.path.exists(dst_dir):
+      os.makedirs(dst_dir)
+    for file_ in files:
+      src_file = os.path.join(src_dir, file_)
+      dst_file = os.path.join(dst_dir, file_)
+      if os.path.exists(dst_file):
+        os.remove(dst_file)
+      shutil.copy(src_file, dst_dir)
+
+
 def check_studies():
   """
   Checks q20sec for studies with no new images in >= 2 min
@@ -64,12 +79,14 @@ def check_studies():
   Move from `received` => `queue` folder for further processing
   Remove empty dirs from `received` folder
   """
-  threading.Timer(20.0, check_studies).start()
+  threading.Timer(60.0, check_studies).start()
   stale_studies = [s for s in last_received_time if (datetime.now() - last_received_time[s]).total_seconds() >= 120]
   for old in stale_studies:
-    new = 'dcmstore/queue'/old.relative_to('dcmstore/received')
-    new.mkdir(parents=True, exist_ok=True)
-    old.rename(new)
+    new = 'dcmstore/queue' / old.relative_to('dcmstore/received')
+    mergefolders(old, new)
+    shutil.rmtree(old)
+    #new.mkdir(parents=True, exist_ok=True)
+    #old.rename(new)
     last_received_time.pop(old)
     try:
       old.parent.rmdir()
@@ -123,8 +140,6 @@ def handle_store(event, storage_dir):
 def handle_echo(event):
     """Handle a C-ECHO request event."""
     return 0x0000
-
-
 
 # List of event handlers
 handlers = [
