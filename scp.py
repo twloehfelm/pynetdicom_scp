@@ -83,9 +83,9 @@ def check_studies():
   stale_studies = [s for s in last_received_time if (datetime.now() - last_received_time[s]).total_seconds() >= 120]
   for old in stale_studies:
     new = 'dcmstore/queue' / old.relative_to('dcmstore/received')
+    last_received_time.pop(old)
     mergefolders(old, new)
     shutil.rmtree(old)
-    last_received_time.pop(old)
     try:
       old.parent.rmdir()
     except OSError:
@@ -126,9 +126,11 @@ def handle_store(event, storage_dir):
     return 0xC001
 
   save_loc = save_loc/ds.SOPInstanceUID
-  # Because SOPInstanceUID includes several '.' you can't just use
-  #   with_suffix or else it will replaces the portion of the UID that follows
+  # Because SOPInstanceUID includes several '.' you can't just use pathlib's
+  #   with_suffix or else it will replace the portion of the UID that follows
   #   the last '.' with '.dcm', truncating the actual UID
+  # Instead we add '.dcm' to what pathlib THINKS is the file suffix (that portion
+  #   of the UID that follows the last .)
   save_loc = save_loc.with_suffix(save_loc.suffix +'.dcm')
   ds.save_as(save_loc, write_like_original=False)
 
@@ -147,7 +149,7 @@ handlers = [
 
 ae = AE()
 
-# Accept storage of all SOP classes
+# Accept storage of all SOP classes that pynetdicom supports
 storage_sop_classes = [
   cx.abstract_syntax for cx in AllStoragePresentationContexts
 ]
@@ -160,9 +162,12 @@ ae.add_supported_context(VerificationSOPClass)
 # ref: https://pydicom.github.io/pynetdicom/dev/examples/storage.html#storage-scp
 ae.maximum_pdu_size = 0
 
+# Start server on localhost, port 11112 (this is the port internal
+#   to the docker container. The port that the network sees is the
+#   host port specified in the .env file.)
 ae.start_server(
-  ('', 11112), # Start server on localhost port 11112
+  ('', 11112),
   block=True,  # Socket operates in blocking mode
-  ae_title=os.environ['AE_TITLE'],
+  ae_title=os.environ['AE_TITLE'], # specified in the .env file
   evt_handlers=handlers
 )
