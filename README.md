@@ -12,12 +12,12 @@ Run
 ```
 
 Uses
-...
-Starts a DICOM-compliant listener with port/AE_TITLE as specified in .env
-Receives DICOMs to dcmstore/received
-Once study has completed transfer, moves to dcmstore/queue.
+```
+* Starts a DICOM-compliant listener with port/AE_TITLE as specified in .env
+* Receives DICOMs to dcmstore/received
+* Once study has completed transfer, moves to dcmstore/queue.
 
-"Completed transfer" is defined as >=2 minutes since last image received for
+ - "Completed transfer" is defined as >=2 minutes since last image received for
 a given MRN/Acc #, or since container up for orphaned studies already in
 /received folder on container up.
 
