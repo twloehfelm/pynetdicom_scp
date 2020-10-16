@@ -1,6 +1,6 @@
 """
 Set of functions to receive DICOM from a sender and process them once
-receipt is complete.
+receipt is complete. Can also send DICOM to a destination.
 The general workflow is:
   - A DICOM storage class providor (SCP) is started
   - Files are received in to dcmstore/received dir
@@ -9,6 +9,7 @@ The general workflow is:
   - A polling function checks the queue folder for complete studies and
     processes them
   - Processed studies are moved to dcmstore/processed
+  - Can invoke SCU and send DICOM to a destination
 """
 
 # ref https://pydicom.github.io/pynetdicom/dev/tutorials/create_scp.html
@@ -23,6 +24,7 @@ from pynetdicom import (
   AE, debug_logger, evt, AllStoragePresentationContexts,
   ALL_TRANSFER_SYNTAXES
 )
+from pydicom import dcmread
 
 # Verification class for C-ECHO (https://pydicom.github.io/pynetdicom/stable/examples/verification.html)
 from pynetdicom.sop_class import VerificationSOPClass
@@ -141,6 +143,7 @@ def handle_echo(event):
     """Handle a C-ECHO request event."""
     return 0x0000
 
+
 # List of event handlers
 handlers = [
   (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),
@@ -171,3 +174,23 @@ ae.start_server(
   ae_title=os.environ['AE_TITLE'], # specified in the .env file
   evt_handlers=handlers
 )
+
+remoteAE = dict(Address=os.environ['SCU_ADDRESS'], Port=os.environ['SCU_PORT'], AET=os.environ['SCU_AETITLE'])
+
+def send_dcm(study):
+  assoc = ae.associate(remoteAE.Address, remoteAE.Port)
+  if not assoc.is_established:
+    print "Could not establish SCU association"
+    return None
+
+  files = [x for x in study.glob('**/*.dcm')]
+  for f in files:
+    ds = dcmread(f)
+    status = assoc.send_c_store(ds, originator_aet=os.environ['AE_TITLE'])
+    if status:
+        # If the storage request succeeded this will be 0x0000
+        print('C-STORE request status: 0x{0:04x}'.format(status.Status))
+    else:
+        print('Connection timed out, was aborted or received invalid response')
+
+  assoc.release()
