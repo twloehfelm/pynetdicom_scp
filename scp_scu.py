@@ -29,7 +29,6 @@ from pydicom import dcmread
 # Verification class for C-ECHO (https://pydicom.github.io/pynetdicom/stable/examples/verification.html)
 from pynetdicom.sop_class import VerificationSOPClass
 
-
 debug_logger()
 LOGGER = logging.getLogger('pynetdicom')
 
@@ -55,7 +54,9 @@ def process_from_queue():
   queue_pts = [x for x in Path('dcmstore/queue').iterdir() if x.is_dir()]
   for pt in queue_pts:
     studies = [x for x in pt.iterdir() if x.is_dir()]
-    ### if len(studies) > 0:
+    if len(studies) > 0:
+      for s in studies:
+        send_dcm(s)
       ### DO SOMETHING with studies[0] here
 
 process_from_queue()
@@ -72,7 +73,6 @@ def mergefolders(root_src_dir, root_dst_dir):
       if os.path.exists(dst_file):
         os.remove(dst_file)
       shutil.copy(src_file, dst_dir)
-
 
 def check_studies():
   """
@@ -143,7 +143,6 @@ def handle_echo(event):
     """Handle a C-ECHO request event."""
     return 0x0000
 
-
 # List of event handlers
 handlers = [
   (evt.EVT_C_STORE, handle_store, [Path('dcmstore/received')]),
@@ -176,8 +175,10 @@ ae.start_server(
 )
 
 remoteAE = dict(Address=os.environ['SCU_ADDRESS'], Port=os.environ['SCU_PORT'], AET=os.environ['SCU_AETITLE'])
-
 def send_dcm(study):
+  """
+  Send all .dcm files in {study} (recursive) to the remoteAE defined in .env
+  """
   assoc = ae.associate(remoteAE.Address, remoteAE.Port)
   if not assoc.is_established:
     print "Could not establish SCU association"
