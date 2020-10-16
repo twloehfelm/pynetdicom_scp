@@ -181,7 +181,7 @@ def send_dcm(study):
   """
   assoc = ae.associate(remoteAE.Address, remoteAE.Port)
   if not assoc.is_established:
-    print "Could not establish SCU association"
+    print('Could not establish SCU association')
     return None
 
   files = [x for x in study.glob('**/*.dcm')]
